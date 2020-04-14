@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# This script will clone a user (in a container)
+# required $ID to be set prior to execution.. 
+# ID=$(id) 
+
+ID=$@
+SID=$(echo $1 | awk '{split($0, u, "("); print(u[2])}' | sed s/\)//g )
+echo $ID
+echo $SID
+echo "#!/bin/bash" > /clone-user
+echo "SID="$SID >> /clone-user
+# make groups
+
+echo $ID \
+| awk '{print $3}' \
+| sed s/=/\\n/g \
+| grep , \
+| sed s/,/\\n/g \
+| sed s/\(/\ /g \
+| sed s/\)//g \
+| awk '{split($0, grp, " "); print("sudo groupdel " $2 " && sudo groupadd -g " $1 " " $2 )}' \
+>> /clone-user
+
+# add groups to user
+
+echo $ID \
+| awk '{print $3}' \
+| sed s/=/\\n/g \
+| grep , \
+| sed s/,/\\n/g \
+| sed s/\(/\ /g \
+| sed s/\)//g \
+| awk '{split($0, grp, " "); print("sudo usermod -aG " $2 " $SID")}' \
+>> /clone-user
+
