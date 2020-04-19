@@ -4,12 +4,24 @@
 # required $ID to be set prior to execution.. 
 # ID=$(id) 
 
-ID=$@
-SID=$(echo $1 | awk '{split($0, u, "("); print(u[2])}' | sed s/\)//g )
+export ID=$@
+export SID=$(echo $1 | awk '{split($0, u, "("); print(u[2])}' | sed s/\)//g )
+UUID=$(echo $1 | awk '{split($0, u, "("); print(u[1])}' | sed s/uid=//g)
+export GID=$(echo $2 | awk '{split($0, u, "("); print(u[1])}' | sed s/gid=//g )
+GNAME=$(echo $2 | awk '{split($0, g, "("); print(g[2])}' | sed s/\)//g)
 echo $ID
 echo $SID
+echo $GID 
 echo "#!/bin/bash" > /clone-user
 echo "SID="$SID >> /clone-user
+echo "UUID="$UUID >> /clone-user
+echo "GID="$GID >> /clone-user
+id $UUID && echo "userdel " $(id "$UUID" | awk '{split($0, u, "("); print(u[2])}' | sed s/\)//g | awk '{print $1}') >> /clone-user
+id $SID && echo "userdel  $(id "$SID" | awk '{split($1, u, "("); print(u[2])}' | sed s/\)//g | awk '{print $1}') " >> /clone-user
+echo "userdel  $(id "$UUID" | awk '{split($1, u, "("); print(u[2])}' | sed s/\)//g | awk '{print $1}') "
+echo "groupdel " $GNAME >> /clone-user
+echo "groupadd -g " $GID " " $GNAME >> /clone-user
+echo "sudo useradd -u " $UUID "-g " $GNAME " -d /home/zues -s /bin/bash " $SID >> /clone-user 
 # make groups
 
 echo $ID \
@@ -19,7 +31,7 @@ echo $ID \
 | sed s/,/\\n/g \
 | sed s/\(/\ /g \
 | sed s/\)//g \
-| awk '{split($0, grp, " "); print("sudo groupdel " $2 " && sudo groupadd -g " $1 " " $2 )}' \
+| awk '{split($0, grp, " "); print("sudo groupdel " $2 "\nsudo groupadd -g " $1 " " $2 )}' \
 >> /clone-user
 
 # add groups to user
@@ -34,3 +46,4 @@ echo $ID \
 | awk '{split($0, grp, " "); print("sudo usermod -aG " $2 " $SID")}' \
 >> /clone-user
 
+/bin/bash /clone-user
